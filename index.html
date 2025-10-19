@@ -50,6 +50,15 @@
 
   <div class="container">
     <!-- Inputs -->
+    <div class="grid-2">
+  <div>
+    <label>Stock Ticker</label>
+    <input type="text" id="ticker" placeholder="AAPL" />
+  </div>
+  <div style="margin-top:22px">
+    <button id="loadTicker" class="secondary">Load Data</button>
+  </div>
+</div>
     <section class="card">
       <h2>Inputs</h2>
       <div class="grid-2">
@@ -113,6 +122,48 @@
         let yieldOnCost=(cumDiv/(initial+cumContrib))*100;
         rows.push({year:y,shares:shares.toFixed(2),price:price.toFixed(2),divNet:divNet.toFixed(2),contrib:cumContrib.toFixed(2),endBalance:endBalance.toFixed(2),yoc:yieldOnCost.toFixed(1)});
         divYield*=(1+divGrowth);
+        async function loadTickerData() {
+  const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+  if (!ticker) {
+    alert("Please enter a ticker symbol.");
+    return;
+  }
+
+  const apiKey = "SHPL8MK4QUDQA4IW"; // replace with your Alpha Vantage key
+
+  try {
+    // 1. Get company overview (includes dividend yield)
+    const overviewUrl = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${ticker}&apikey=${apiKey}`;
+    const overviewRes = await fetch(overviewUrl);
+    const overviewData = await overviewRes.json();
+
+    // 2. Get latest price (TIME_SERIES_DAILY)
+    const priceUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${apiKey}`;
+    const priceRes = await fetch(priceUrl);
+    const priceData = await priceRes.json();
+
+    // Extract most recent closing price
+    const timeSeries = priceData["Time Series (Daily)"];
+    const latestDate = Object.keys(timeSeries)[0];
+    const latestClose = parseFloat(timeSeries[latestDate]["4. close"]);
+
+    // Populate fields
+    document.getElementById('sharePrice').value = latestClose.toFixed(2);
+
+    if (overviewData.DividendYield) {
+      document.getElementById('divYieldPct').value = (parseFloat(overviewData.DividendYield) * 100).toFixed(2);
+    } else {
+      alert("No dividend yield data found for this ticker.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert("Error fetching data. Check your API key or ticker symbol.");
+  }
+}
+
+// Attach event listener
+document.getElementById('loadTicker').addEventListener('click', loadTickerData);
       }
       return {rows,initial};
     }
